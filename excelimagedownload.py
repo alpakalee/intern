@@ -35,13 +35,16 @@ def search_files_by_tag(tag):
 def download_file(file_id, file_name, dest_folder):
     request = drive_service.files().get_media(fileId=file_id)
     file_path = os.path.join(dest_folder, file_name)
-    with open(file_path, 'wb') as f:
-        f.write(request.execute())
+    try:
+        with open(file_path, 'wb') as f:
+            f.write(request.execute())
+    except Exception as e:
+        print(f"Error downloading {file_name}: {e}")
 
 def main():
     search_tag = input("Enter the tag to search for: ")
-    dest_folder = input("Enter the destination folder path: ")
-    
+    dest_folder = input("Enter the destination folder path: ").replace('"', '').strip()  # 큰따옴표 제거
+
     if not os.path.exists(dest_folder):
         os.makedirs(dest_folder)
 
