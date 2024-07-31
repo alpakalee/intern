@@ -5,10 +5,11 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 import io
 import pandas as pd
+import threading # 비동기 처리를 위해 threading 추가
 
 # Google API 설정
 SCOPES = ['https://www.googleapis.com/auth/drive', 'https://www.googleapis.com/auth/spreadsheets']
-SERVICE_ACCOUNT_FILE = 'credentials.json'
+SERVICE_ACCOUNT_FILE = ''
 
 creds = service_account.Credentials.from_service_account_file(
     SERVICE_ACCOUNT_FILE, scopes=SCOPES)
@@ -16,7 +17,7 @@ creds = service_account.Credentials.from_service_account_file(
 drive_service = build('drive', 'v3', credentials=creds)
 sheets_service = build('sheets', 'v4', credentials=creds)
 
-SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID'
+SPREADSHEET_ID = ''
 SHEET_NAME = 'Tags'
 
 def get_sheet_data():
@@ -70,6 +71,7 @@ class ImageTaggerApp:
         self.tag_entry_label.pack()
         self.tag_entry = tk.Entry(self.right_frame, width=50)
         self.tag_entry.pack(pady=5)
+        self.tag_entry.bind("<Return>", lambda event: self.save_tags()) # 엔터 키로 태그 저장
         self.save_button = tk.Button(self.right_frame, text="Save Tags", command=self.save_tags)
         self.save_button.pack(pady=5)
 
@@ -85,25 +87,30 @@ class ImageTaggerApp:
     def show_next_image(self):
         while self.current_image_index < len(self.images):
             file = self.images[self.current_image_index]
-            if file['id'] not in self.df['File ID'].values:
-                image_data = get_image_data(file['id'])
-                image = Image.open(image_data)
-                image.thumbnail((400, 400))
-                self.photo = ImageTk.PhotoImage(image)
-                self.image_label.config(image=self.photo)
-                self.current_file = file
-                self.tag_entry.delete(0, tk.END)
+            if file['name'] not in self.df['File Name'].values:  # 이미 스프레드시트에 있는 파일 이름인지 확인
+                threading.Thread(target=self.load_image, args=(file,)).start()  # 비동기적으로 이미지 로드
                 return
             self.current_image_index += 1
         messagebox.showinfo("Info", "No more images to tag")
 
+    def load_image(self, file):
+        image_data = get_image_data(file['id'])
+        image = Image.open(image_data)
+        image.thumbnail((400, 400))
+        self.photo = ImageTk.PhotoImage(image)
+        self.image_label.config(image=self.photo)
+        self.current_file = file
+        self.tag_entry.delete(0, tk.END)
+
     def save_tags(self):
         tags = self.tag_entry.get()
         if tags:
+            tags_list = [tag.strip() for tag in tags.split(',')] # 쉼표로 구분된 태그 처리
+            tags_str = ', '.join(tags_list)
             new_row = pd.DataFrame([{
                 'File ID': self.current_file['id'],
                 'File Name': self.current_file['name'],
-                'Tags': tags
+                'Tags': tags_str
             }])
             self.df = pd.concat([self.df, new_row], ignore_index=True)
             update_sheet_data(self.df)
