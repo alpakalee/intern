@@ -67,12 +67,12 @@ class ImageTaggerApp:
         self.image_label.pack()
 
         # Tag Entry
-        self.tag_entry_label = tk.Label(self.right_frame, text="Enter Tags:")
+        self.tag_entry_label = tk.Label(self.right_frame, text="태그를 입력해주세요 :")
         self.tag_entry_label.pack()
         self.tag_entry = tk.Entry(self.right_frame, width=50)
         self.tag_entry.pack(pady=5)
         self.tag_entry.bind("<Return>", lambda event: self.save_tags()) # 엔터 키로 태그 저장
-        self.save_button = tk.Button(self.right_frame, text="Save Tags", command=self.save_tags)
+        self.save_button = tk.Button(self.right_frame, text="엔터로 저장", command=self.save_tags)
         self.save_button.pack(pady=5)
 
         # Load initial images
@@ -91,7 +91,7 @@ class ImageTaggerApp:
                 threading.Thread(target=self.load_image, args=(file,)).start()  # 비동기적으로 이미지 로드
                 return
             self.current_image_index += 1
-        messagebox.showinfo("Info", "No more images to tag")
+        messagebox.showinfo("Info", "태그 작업이 완료되었습니다.")
 
     def load_image(self, file):
         image_data = get_image_data(file['id'])
@@ -117,7 +117,7 @@ class ImageTaggerApp:
             self.current_image_index += 1
             self.show_next_image()
         else:
-            messagebox.showwarning("Warning", "Please enter tags before saving")
+            messagebox.showwarning("Warning", "태그가 없이 저장할 수 없습니다.")
 
 if __name__ == "__main__":
     root = tk.Tk()
